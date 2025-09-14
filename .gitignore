@@ -1,1 +1,7 @@
+# ide things
+.vscode
+.idea
+
+
+# rust things
 /target
