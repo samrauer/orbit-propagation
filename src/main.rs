@@ -1,5 +1,6 @@
 mod integrator;
 mod state;
+mod evector;
 
 fn main() {
     println!("Hello, world!");
