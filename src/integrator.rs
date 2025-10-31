@@ -1,61 +1,52 @@
-use std::iter::zip;
+use na::{Vector3};
+
 
 /// Euler integration for 1 step
-///
-/// # Arguments
-///
-/// * `f` - A function that computes the time derivative.
-/// * `x` - The current state.
-/// * `dt` - The time step (must be positive).
-///
-/// # Returns
-///
-/// A new `Vec<f64>` representing the next state.
-pub fn integrate_euler<F>(f: F, x0: &Vec<f64>, dt: f64) -> Vec<f64>
-where F: Fn(&Vec<f64>) -> Vec<f64>,
-{
-    assert!(dt >= 0.0, "dt must be positive");
+#[allow(dead_code)]
+pub fn integrate_euler<F>(f: F, x0: &Vector3<f64>, dt: f64) -> Vector3<f64>
+where 
+    F: Fn(&Vector3<f64>) -> Vector3<f64>,
 
+{
+    // check we have valid conditions
+    assert!(dt >= 0.0, "dt must be positive");
+    assert!(
+        !x0.iter().any(|e| e.is_nan() || e.is_infinite()),
+        "x0 contains NaN or infinity"
+    );
+
+    // compute derivative
     let xdot = f(&x0);
 
-    zip(x0, xdot)
-        .map(|(xi, xdoti)| xi + xdoti * dt)
-        .collect()
+    // euler integration
+    x0 + xdot*dt
 }
 
 
+/// Euler predictor corrector (midpoint) integration for 1 step
+pub fn integrate_euler_pc<F>(f: F, x0: &Vector3<f64>, dt: f64) -> Vector3<f64>
+where 
+    F: Fn(&Vector3<f64>) -> Vector3<f64>,
 
-
-/// Predictor-corrector integration for 1 step
-///
-/// # Arguments
-///
-/// * `f` - A function that computes the time derivative.
-/// * `x` - The current state.
-/// * `dt` - The time step (must be positive).
-///
-/// # Returns
-///
-/// A new `Vec<f64>` representing the next state.
-pub fn integrate_euler_with_corrector<F>(f: F, x0: &Vec<f64>, dt: f64) -> Vec<f64>
-where F: Fn(&Vec<f64>) -> Vec<f64>,
 {
+    // check we have valid conditions
     assert!(dt >= 0.0, "dt must be positive");
+    assert!(
+        !x0.iter().any(|e| e.is_nan() || e.is_infinite()),
+        "x0 contains NaN or infinity"
+    );
 
-    // x1 guess using forward euler
+    // compute derivative at x0
     let xdot_x0 = f(&x0);
-    let x1: Vec<f64> = zip(x0, &xdot_x0)
-        .map(|(xi, xdoti)| xi + xdoti * dt)
-        .collect();
+    let x1 = x0 + xdot_x0*dt;
 
-    // predictor by taking derivative at prediction spot and averaging
+    // compute derivative at x1
     let xdot_x1 = f(&x1);
-    let xdot_avg: Vec<f64> = zip(&xdot_x0, &xdot_x1)
-        .map(|(xdot0, xdot1)| 0.5 * (xdot0 + xdot1))
-        .collect();
 
-    // use average derivative to propagate state forward
-    zip(x0, &xdot_avg)
-        .map(|(xi, xdoti)| xi + xdoti * dt)
-        .collect()
+    // compute average derivative between x0 and x1
+    let xdot_avg = 0.5 * (xdot_x0 + xdot_x1);
+
+    // use averaged derivative to propagate x0 forward
+    x0 + xdot_avg * dt
 }
+

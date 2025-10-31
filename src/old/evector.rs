@@ -5,7 +5,7 @@ use std::iter::zip;
 // TODO: for all EVec operations, decide whether we want to consume
 //       the two objects orjust borrow them to do our operations
 
-
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct EVec<T>(pub Vec<T>);
 
