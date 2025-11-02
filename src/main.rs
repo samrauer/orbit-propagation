@@ -11,7 +11,7 @@ fn main() {
 
     // testing1();
     // testing2();
-    testing3();
+    // testing3();
 }
 
 
@@ -56,25 +56,25 @@ fn testing2() {
 }
 
 
-#[allow(dead_code)]
-fn testing3() {
-    let f = |x: &Vector3<f64>| -x;
+// #[allow(dead_code)]
+// fn testing3() {
+//     let f = |x: &Vector3<f64>| -x;
 
-    let x0 = Vector3::new(10.0, 1.0, -5.0);
+//     let x0 = Vector3::new(10.0, 1.0, -5.0);
 
-    // forward euler
-    let x1_euler = integrator::euler::integrate_euler(f, &x0, 0.1);
-    let x2_euler = integrator::euler::integrate_euler(f, &x1_euler, 0.1);
+//     // forward euler
+//     let x1_euler = integrator::euler::integrate_euler(f, &x0, 0.1);
+//     let x2_euler = integrator::euler::integrate_euler(f, &x1_euler, 0.1);
 
-    // predictor corrector
-    let x1_pc = integrator::euler_pc::integrate_euler_pc(f, &x0, 0.1);
-    let x2_pc = integrator::euler_pc::integrate_euler_pc(f, &x1_pc, 0.1);
+//     // predictor corrector
+//     let x1_pc = integrator::euler_pc::integrate_euler_pc(f, &x0, 0.1);
+//     let x2_pc = integrator::euler_pc::integrate_euler_pc(f, &x1_pc, 0.1);
 
-    println!("{:?}", x0);
-    println!("{:?}", x1_euler);
-    println!("{:?}", x2_euler);
+//     println!("{:?}", x0);
+//     println!("{:?}", x1_euler);
+//     println!("{:?}", x2_euler);
 
-    println!("{:?}", x0);
-    println!("{:?}", x1_pc);
-    println!("{:?}", x2_pc);
-}
+//     println!("{:?}", x0);
+//     println!("{:?}", x1_pc);
+//     println!("{:?}", x2_pc);
+// }

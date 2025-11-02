@@ -1,4 +1,5 @@
 use std::ops::{Add, Mul, Sub, Div};
+use na::{DefaultAllocator, Dim, OVector, allocator::Allocator};
 
 pub trait State:
     Clone
@@ -46,7 +47,31 @@ impl State for f64 {
 
 
 
+impl<D> State for OVector<f64, D> 
+where
+    D: Dim,
+    DefaultAllocator: Allocator<D>,
+{
+    fn norm(&self) -> f64 {
+        self.norm()
+    }
 
+    fn sum(&self) -> f64 {
+        self.sum()
+    }
+    
+    fn map<F>(&self, mut f: F) -> Self
+    where 
+        F: FnMut(f64) -> f64,
+    {
+        self.map(|x| f(x))
+    }
 
-
+    fn zip_map<F>(&self, other: &Self, mut f: F) -> Self
+    where 
+        F: FnMut(f64, f64) -> f64,
+    {
+        self.zip_map(other, |x, y| f(x, y))
+    }
+}
 
