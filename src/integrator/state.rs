@@ -10,6 +10,7 @@ pub trait State:
 {
     fn norm(&self) -> f64;
     fn sum(&self) -> f64;
+    fn length(&self) -> u64;
 
     fn map<F>(&self, f: F) -> Self
     where
@@ -28,6 +29,10 @@ impl State for f64 {
 
     fn sum(&self) -> f64 {
         *self
+    }
+
+    fn length(&self) -> u64 {
+        1
     }
     
     fn map<F>(&self, mut f: F) -> Self 
@@ -58,6 +63,10 @@ where
 
     fn sum(&self) -> f64 {
         self.sum()
+    }
+
+    fn length(&self) -> u64 {
+        self.nrows() as u64
     }
     
     fn map<F>(&self, mut f: F) -> Self

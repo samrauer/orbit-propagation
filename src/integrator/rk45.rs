@@ -1,3 +1,4 @@
+#![allow(warnings)]
 #![allow(dead_code)]
 
 use na::Vector3;
