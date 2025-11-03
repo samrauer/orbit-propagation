@@ -6,8 +6,12 @@ use super::state::State;
 
 
 const RK12_SAFETY_FACTOR: f64 = 0.8;
-const RK12_C2: f64 = 0.5; // TODO: decide whether to change F(x) to F(t,x)
-const RK12_C3: f64 = 1.0; // TODO: decide whether to change F(x) to F(t,x)
+
+// RK12 Fehlberg coefficients
+// https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods
+
+const RK12_C2: f64 = 0.5;
+const RK12_C3: f64 = 1.0;
 const RK12_A21: f64 = 0.5;
 const RK12_A31: f64 = 1.0 / 256.0;
 const RK12_A32: f64 = 255.0 / 256.0;
@@ -49,6 +53,7 @@ impl Default for RK12Options {
 
 /// Fehlberg RK1(2) integration
 ///     Integrates from t in tspan
+/// TODO: decide whether to change F(x) to F(t,x)
 pub fn integrate_rk12<F, T>(f: F, x0: &T, tspan: (f64,f64), opts: Option<RK12Options>) -> Result<T, String>
 where 
     F: Fn(&T) -> T,
@@ -77,7 +82,8 @@ where
         if t + h > tspan.1 {
             h = tspan.1 - t;
 
-            // TODO: add logic so if 
+            // TODO: add logic so if h becomes super tiny, we step past tspan.1 and interpolate at tspan.1
+            //       to avoid floating point edge cases
         } else if h < opts.rhmin * tspan.1 {
             return Err(
                 format!(
@@ -102,7 +108,7 @@ where
         let xh_2 = x.clone() + (k1.clone() * RK12_B1 + k2.clone() * RK12_B2 + k3.clone() * RK12_B3) * h;
 
         // compute error
-        // TODO: did I compute error allowed correctly? I don't think I did
+        // TODO: did I compute error allowed correctly? I don't think I did. Come back to this!
         let error_allowed = (xh_1.clone() - xh_2.clone())
             .map(|x|  opts.atol + opts.rtol * x.abs());
 
