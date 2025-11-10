@@ -1,6 +1,7 @@
 mod state;
 mod old;
 mod integrator;
+mod orbital_mechanics;
 
 extern crate nalgebra as na;
 use na::{Vector3, Rotation3};
