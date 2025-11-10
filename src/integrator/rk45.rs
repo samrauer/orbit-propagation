@@ -65,15 +65,15 @@ const B7S: f64 = 1.0 / 40.0;
 
 pub struct RK45Options {
     // relative tolerance
-    rtol: f64,
+    pub rtol: f64,
     // absolute tolerance
-    atol: f64,
+    pub atol: f64,
     // min integrator step size relative to total integration time
-    rhmin: f64,
+    pub rhmin: f64,
     // max integrator step size relative to total integration time
-    rhmax: f64,
-    scale_min: f64,
-    scale_max: f64,
+    pub rhmax: f64,
+    pub scale_min: f64,
+    pub scale_max: f64,
 } 
 
 impl Default for RK45Options {
@@ -225,3 +225,6 @@ where
 
     Ok(x)
 }
+
+
+// TODO: tests!!!
