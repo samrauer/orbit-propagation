@@ -5,9 +5,10 @@ const MAX_ITER: i64 = 1000;
 
 
 
-pub fn newton_raphson_scalar<F>(f: F, fp: F, x0: f64, atol: f64) -> f64 
+pub fn newton_raphson_scalar<F1,F2>(f: F1, fp: F2, x0: f64, atol: f64) -> f64 
 where 
-    F: Fn(f64) -> f64,
+    F1: Fn(f64) -> f64,
+    F2: Fn(f64) -> f64
 {
     let mut x1: f64 = x0 - 2.0*atol; // force while loop condition to be false
     let mut x2: f64 = x0;
@@ -22,7 +23,11 @@ where
         counter -= 1;
 
         x1 = x2;
-        x2 = x1 - f(x1)/fp(x1);
+
+        let fx = f(x1);
+        let fpx = fp(x2);
+
+        x2 = x1 - fx / fpx;
 
         // TODO: check that |fp| > 1e-10 (far away from 0) before doing this divide
     }
