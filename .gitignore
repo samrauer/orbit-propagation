@@ -1,7 +1,12 @@
-# ide things
+# ide stuff
 .vscode
 .idea
 
 
-# rust things
+# rust stuff
 /target
+
+
+# python stuff
+.venv
+venv

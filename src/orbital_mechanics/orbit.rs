@@ -41,7 +41,7 @@ fn ma2ea(e: f64, ma: f64) -> f64 {
     let f = |ea: f64| ea - e*ea.sin() - ma;
     let fp = |ea: f64| 1.0 - e*ea.cos();
 
-    let ea0: f64 = if e >= 0.8 { (6.0*ma/e).powf(1.0/3.0) } else { ma };
+    let ea0: f64 = if ma/(1.0 - e) < (6.0*(1.0-e)/e).sqrt() { ma/(1.0 - e) } else { (6.0*ma/e).powf(1.0/3.0) };
 
     newton_raphson_scalar(f, fp, ea0, MA_2_EA_ATOL)
 }
