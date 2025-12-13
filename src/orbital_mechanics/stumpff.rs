@@ -58,8 +58,12 @@ pub fn stumpff_dsdz(z: f64) -> f64 {
         // use power series expansion for small z
         return -1.0/F5 + 2.0*z/F7 - 3.0*z.powi(2)/F9 + 4.0*z.powi(3)/F11;
     }
+    
+    let s = stumpff_s(z);
+    let c = stumpff_c(z);
+
     // Eq. 5-30 BMW
-    todo!()
+    1.0/(2.0*z) * (c - 3.0*s)
 }
 
 /// Stumpf function derivative C'(z)
@@ -69,8 +73,12 @@ pub fn stumpff_dcdz(z: f64) -> f64 {
         // use power series expansion for small z
         return -1.0/F4 + 2.0*z/F6 - 3.0*z.powi(2)/F8 + 4.0*z.powi(3)/F10;
     }
+    
+    let s = stumpff_s(z);
+    let c = stumpff_c(z);
+
     // Eq. 5-31 BMW
-    todo!()
+    1.0/(2.0*z) * (1.0 - z*s - 2.0*c)
 }
 
 
@@ -139,5 +147,45 @@ mod tests {
         let c = stumpff_c(z);
 
         assert_abs_diff_eq!(c, c_expected, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_stumpff_sp_0() {
+        // z = 0 case
+        let z: f64 = 0.0;
+        let sp_expected = -1.0/120.0;
+        let sp = stumpff_dsdz(z);
+
+        assert_abs_diff_eq!(sp, sp_expected, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_stumpff_sp_g0() {
+        // z > 0 case
+        let z: f64 = 1.0;
+        let sp_expected = -0.007944675722225125;
+        let sp = stumpff_dsdz(z);
+
+        assert_abs_diff_eq!(sp, sp_expected, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_stumpff_cp_0() {
+        // z = 0 case
+        let z: f64 = 0.0;
+        let cp_expected = -1.0/24.0;
+        let cp = stumpff_dcdz(z);
+
+        assert_abs_diff_eq!(cp, cp_expected, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_stumpff_cp_g0() {
+        // z > 0 case
+        let z: f64 = 1.0;
+        let cp_expected = -0.03896220172791198;
+        let cp = stumpff_dcdz(z);
+
+        assert_abs_diff_eq!(cp, cp_expected, epsilon = 1e-12);
     }
 }
