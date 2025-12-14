@@ -7,7 +7,7 @@ use crate::orbital_mechanics::{orbit::Trajectory, stumpff::{stumpff_c, stumpff_s
 
 /// tolerance for picking the initial guess of x.
 /// chosen arbitrarily, change in future if needed.
-const TOL_PARABOLA: f64 = 5e-2;
+const TOL_PARABOLA: f64 = 1e-8;
 
 /// newton-raphson iteration parameters
 const NR_TOL: f64 = 1e-9;
@@ -17,7 +17,7 @@ const NR_MAX_ITER: i64 = 100;
 
 fn guess_x_ellipse(alpha: f64, mu: f64, dt: f64) -> f64 {
     // ellipse (BMW eq. 4.75)
-    mu * dt * alpha
+    mu.sqrt() * dt * alpha
 }
 
 fn guess_x_parabola(mu: f64, r0: f64, dt: f64) -> f64 {
@@ -140,4 +140,209 @@ pub fn propagate_orbit(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, S
     let v_new: Vector3<f64> = fdot * trajectory.r.clone() + gdot * trajectory.v.clone();
 
     Ok(Trajectory { r: r_new, v: v_new, mu: trajectory.mu })
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use std::f64::consts::PI;
+
+    use super::*;
+    use approx::{assert_abs_diff_eq, assert_relative_eq};
+    use crate::orbital_mechanics::consts::{MU_EARTH, R_EARTH};
+    
+    fn get_alpha(r0: f64, v0: f64, mu: f64) -> f64 {
+        -v0.powi(2)/mu + 2.0/r0
+    }
+
+    #[test]
+    fn test_guess_x_ellipse() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = (MU_EARTH / r0).sqrt();
+        
+        let alpha: f64 = get_alpha(r0, v0, MU_EARTH);
+        let dt: f64 = 120.0;
+        
+        let x_expected: f64 = 343.68;
+        let x_actual: f64 = guess_x_ellipse(alpha, MU_EARTH, dt);
+
+        assert_abs_diff_eq!(x_actual, x_expected, epsilon = 0.1);
+    }
+
+    #[test]
+    fn test_guess_x_parabola() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = (2.0*MU_EARTH / r0).sqrt();
+        
+        let dt: f64 = 120.0;
+        
+        let x_expected: f64 = 343.68;
+        let x_actual: f64 = guess_x_parabola(MU_EARTH, r0, dt);
+
+        assert_abs_diff_eq!(x_actual, x_expected, epsilon = 0.1);
+    }
+
+    #[test]
+    fn test_guess_x_hyperbola() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = (3.0*MU_EARTH / r0).sqrt();
+        let rv0 = r0 * v0 / 20.0;
+        
+        let alpha: f64 = get_alpha(r0, v0, MU_EARTH);
+        let dt: f64 = 120.0;
+        
+        let x_expected: f64 = 2906.00;
+        let x_actual: f64 = guess_x_hyperbola(alpha, MU_EARTH, r0, rv0, dt);
+
+        assert_abs_diff_eq!(x_actual, x_expected, epsilon = 0.1);
+    }
+
+    #[test]
+    fn test_propagate_orbit_ellipse() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = (MU_EARTH / r0).sqrt();
+        let angle: f64 = PI / 6.0;
+        let v: Vector3<f64> = Vector3::new(0.0, v0*angle.cos(), v0*angle.sin());
+        
+        let traj = Trajectory { r: r, v: v, mu: MU_EARTH };
+        let dt: f64 = 120.0;
+
+        let result = propagate_orbit(&traj, dt);
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+
+        let r1_expected: Vector3<f64> = Vector3::new(
+            6912.02515643, 
+            783.62103572, 
+            452.42381591
+        ) * 1000.0;
+        let v1_expected: Vector3<f64> = Vector3::new(
+            -0.9815258, 
+            6.49325122, 
+            3.74888034
+        ) * 1000.0;
+
+        assert_relative_eq!(result.r.x, r1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.r.y, r1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.r.z, r1_expected.z, max_relative = 1e-6);
+
+        assert_relative_eq!(result.v.x, v1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.v.y, v1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.v.z, v1_expected.z, max_relative = 1e-6);
+
+        // energy and momentum checks
+        assert_relative_eq!(
+            result.momentum_angular_norm(), 
+            traj.momentum_angular_norm(), 
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            result.energy(), 
+            traj.energy(), 
+            max_relative = 1e-12
+        );
+    }
+
+    #[test]
+    fn test_propagate_orbit_hyperbola() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = 3.0*(MU_EARTH / r0).sqrt();
+        let angle: f64 = PI / 6.0;
+        let v: Vector3<f64> = Vector3::new(0.0, v0*angle.cos(), v0*angle.sin());
+        
+        let traj = Trajectory { r: r, v: v, mu: MU_EARTH };
+        let dt: f64 = 360.0;
+
+        let result = propagate_orbit(&traj, dt);
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+
+        let r1_expected: Vector3<f64> = Vector3::new(
+            6547.48923501, 
+            6952.03477179, 
+            4013.75914691
+        ) * 1000.0;
+        let v1_expected: Vector3<f64> = Vector3::new(
+            -1.95325953, 
+            18.84277277, 
+            10.87887993
+        ) * 1000.0;
+
+        assert_relative_eq!(result.r.x, r1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.r.y, r1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.r.z, r1_expected.z, max_relative = 1e-6);
+
+        assert_relative_eq!(result.v.x, v1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.v.y, v1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.v.z, v1_expected.z, max_relative = 1e-6);
+
+        // energy and momentum checks
+        assert_relative_eq!(
+            result.momentum_angular_norm(), 
+            traj.momentum_angular_norm(), 
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            result.energy(), 
+            traj.energy(), 
+            max_relative = 1e-12
+        );
+    }
+
+    #[test]
+    fn test_propagate_orbit_parabola() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = 2f64.sqrt() *(MU_EARTH / r0).sqrt();
+        let angle: f64 = PI / 6.0;
+        let v: Vector3<f64> = Vector3::new(0.0, v0*angle.cos(), v0*angle.sin());
+        
+        let traj = Trajectory { r: r, v: v, mu: MU_EARTH };
+        let dt: f64 = 2400.0;
+
+        let result = propagate_orbit(&traj, dt);
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+
+        let r1_expected: Vector3<f64> = Vector3::new(
+            -3511.11060671, 
+            14805.82247355, 
+            8548.14559068
+        ) * 1000.0;
+        let v1_expected: Vector3<f64> = Vector3::new(
+            -5.23763722, 
+            3.69904162, 
+            2.13564267
+        ) * 1000.0;
+
+        assert_relative_eq!(result.r.x, r1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.r.y, r1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.r.z, r1_expected.z, max_relative = 1e-6);
+
+        assert_relative_eq!(result.v.x, v1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.v.y, v1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.v.z, v1_expected.z, max_relative = 1e-6);
+
+        // energy and momentum checks
+        assert_relative_eq!(
+            result.momentum_angular_norm(), 
+            traj.momentum_angular_norm(), 
+            epsilon = 1e-7
+        );
+        assert_relative_eq!(
+            result.energy(), 
+            traj.energy(), 
+            epsilon = 1e-7
+        );
+    }
+
 }

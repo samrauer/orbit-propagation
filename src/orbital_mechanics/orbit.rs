@@ -9,6 +9,7 @@ use crate::orbital_mechanics::properties::{
 
 
 
+#[derive(Debug)]
 pub struct Trajectory {
     pub r: Vector3<f64>,
     pub v: Vector3<f64>,
