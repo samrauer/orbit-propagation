@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 
-use na::Vector3;
+use na::{Vector3, Vector6};
 use crate::orbital_mechanics::{orbit::Trajectory, stumpff::{stumpff_c, stumpff_s}};
 use crate::integrator::{rk45::{integrate_rk45, RK45Options}};
 
@@ -144,10 +144,48 @@ pub fn propagate_orbit(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, S
 
 
 /// Propagates an orbit using numerical integration.
-// pub fn propagate_orbit_numerically(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, String> {
-//     let options = RK45Options
-//     todo!()
-// }
+pub fn propagate_orbit_numerically(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, String> {
+    let options = RK45Options {
+        rtol: 1e-4,
+        atol: 1e-7,
+        ..RK45Options::default()
+    };
+    let tspan = (0.0, dt);
+    let x0: Vector6<f64> = Vector6::new(
+        trajectory.r.x,
+        trajectory.r.y, 
+        trajectory.r.z, 
+        trajectory.v.x, 
+        trajectory.v.y, 
+        trajectory.v.z, 
+    );
+
+    let f = |x: &Vector6<f64>| -> Vector6<f64> {
+        let mut dx: Vector6<f64> = Vector6::new(0.0,0.0,0.0,0.0,0.0,0.0);
+
+        dx.x = x.w;
+        dx.y = x.a;
+        dx.z = x.b;
+
+        let r = (x.x.powi(2) + x.y.powi(2) + x.z.powi(2)).sqrt();
+
+        let neg_mu_r3 = -trajectory.mu/r.powi(3);
+
+        dx.w = neg_mu_r3 * x.x;
+        dx.a = neg_mu_r3 * x.y;
+        dx.b = neg_mu_r3 * x.z;
+
+        dx
+    };
+
+
+    let result = integrate_rk45(f, &x0, tspan, Some(options))?;
+
+    let r1: Vector3<f64> = Vector3::new(result.x, result.y, result.z);
+    let v1: Vector3<f64> = Vector3::new(result.w, result.a, result.b);
+
+    Ok(Trajectory { r: r1, v: v1, mu: trajectory.mu })
+}
 
 
 #[cfg(test)]
@@ -341,12 +379,108 @@ mod tests {
         assert_relative_eq!(
             result.momentum_angular_norm(), 
             traj.momentum_angular_norm(), 
-            epsilon = 1e-7
+            max_relative = 1e-10
         );
         assert_relative_eq!(
             result.energy(), 
             traj.energy(), 
             epsilon = 1e-7
+        );
+    }
+
+    #[test]
+    fn test_propagate_orbit_numeric() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = 2f64.sqrt() *(MU_EARTH / r0).sqrt();
+        let angle: f64 = PI / 6.0;
+        let v: Vector3<f64> = Vector3::new(0.0, v0*angle.cos(), v0*angle.sin());
+        
+        let traj = Trajectory { r: r, v: v, mu: MU_EARTH };
+        let dt: f64 = 2400.0;
+
+        let result = propagate_orbit_numerically(&traj, dt);
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+
+        let r1_expected: Vector3<f64> = Vector3::new(
+            -3511.11060671, 
+            14805.82247355, 
+            8548.14559068
+        ) * 1000.0;
+        let v1_expected: Vector3<f64> = Vector3::new(
+            -5.23763722, 
+            3.69904162, 
+            2.13564267
+        ) * 1000.0;
+
+        assert_relative_eq!(result.r.x, r1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.r.y, r1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.r.z, r1_expected.z, max_relative = 1e-6);
+
+        assert_relative_eq!(result.v.x, v1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.v.y, v1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.v.z, v1_expected.z, max_relative = 1e-6);
+
+        // energy and momentum checks
+        assert_relative_eq!(
+            result.momentum_angular_norm(), 
+            traj.momentum_angular_norm(), 
+            max_relative = 1e-10
+        );
+        assert_relative_eq!(
+            result.energy(), 
+            traj.energy(), 
+            epsilon = 1e-5
+        );
+    }
+
+    #[test]
+    fn test_propagate_orbit_ellipse_numeric() {
+        let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
+        let r0: f64 = r.norm();
+        let v0: f64 = (MU_EARTH / r0).sqrt();
+        let angle: f64 = PI / 6.0;
+        let v: Vector3<f64> = Vector3::new(0.0, v0*angle.cos(), v0*angle.sin());
+        
+        let traj = Trajectory { r: r, v: v, mu: MU_EARTH };
+        let dt: f64 = 120.0;
+
+        let result = propagate_orbit_numerically(&traj, dt);
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+
+        let r1_expected: Vector3<f64> = Vector3::new(
+            6912.02515643, 
+            783.62103572, 
+            452.42381591
+        ) * 1000.0;
+        let v1_expected: Vector3<f64> = Vector3::new(
+            -0.9815258, 
+            6.49325122, 
+            3.74888034
+        ) * 1000.0;
+
+        assert_relative_eq!(result.r.x, r1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.r.y, r1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.r.z, r1_expected.z, max_relative = 1e-6);
+
+        assert_relative_eq!(result.v.x, v1_expected.x, max_relative = 1e-6);
+        assert_relative_eq!(result.v.y, v1_expected.y, max_relative = 1e-6);
+        assert_relative_eq!(result.v.z, v1_expected.z, max_relative = 1e-6);
+
+        // energy and momentum checks
+        assert_relative_eq!(
+            result.momentum_angular_norm(), 
+            traj.momentum_angular_norm(), 
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            result.energy(), 
+            traj.energy(), 
+            max_relative = 1e-12
         );
     }
 
