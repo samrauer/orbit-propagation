@@ -145,9 +145,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
-    fn rk12_const_deriv() {
+    fn test_rk12_const_deriv() {
         // integrating 1 should product x(t) = t
         fn f(_: &f64) -> f64 {
             1.0
@@ -163,11 +164,11 @@ mod tests {
         let result = integrate_rk12(f, &x0, tspan, None);
         let x1_truth: f64 = result.unwrap();
 
-        assert!((x1_expected - x1_truth).abs() < 1e-12);
+        assert_relative_eq!(x1_truth, x1_expected, epsilon=1e-12);
     }
 
     #[test]
-    fn rk12_dependent_deriv() {
+    fn test_rk12_dependent_deriv() {
         // integrating x should product x(t) = x0 * e^t
         fn f(x: &f64) -> f64 {
             *x
@@ -184,6 +185,6 @@ mod tests {
         assert!(result.is_ok());
         let x1_truth: f64 = result.unwrap();
 
-        assert!((x1_expected - x1_truth).abs() < 1e-3);
+        assert_relative_eq!(x1_truth, x1_expected, epsilon=1e-3);
     }
 }

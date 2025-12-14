@@ -3,7 +3,7 @@
 
 use na::Vector3;
 use crate::orbital_mechanics::{orbit::Trajectory, stumpff::{stumpff_c, stumpff_s}};
-
+use crate::integrator::{rk45::{integrate_rk45, RK45Options}};
 
 /// tolerance for picking the initial guess of x.
 /// chosen arbitrarily, change in future if needed.
@@ -143,6 +143,12 @@ pub fn propagate_orbit(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, S
 }
 
 
+/// Propagates an orbit using numerical integration.
+// pub fn propagate_orbit_numerically(trajectory: &Trajectory, dt: f64) -> Result<Trajectory, String> {
+//     let options = RK45Options
+//     todo!()
+// }
+
 
 #[cfg(test)]
 mod tests {
@@ -175,7 +181,6 @@ mod tests {
     fn test_guess_x_parabola() {
         let r: Vector3<f64> = Vector3::new(R_EARTH + 600e3, 0.0, 0.0);
         let r0: f64 = r.norm();
-        let v0: f64 = (2.0*MU_EARTH / r0).sqrt();
         
         let dt: f64 = 120.0;
         

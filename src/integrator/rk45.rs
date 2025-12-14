@@ -1,6 +1,7 @@
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
-use std::ops::Mul;
+use std::{f64::EPSILON, ops::Mul};
 use crate::integrator::state::State;
 
 
@@ -92,7 +93,6 @@ impl Default for RK45Options {
 
 /// Runge-Kutta 45 Dormand-Prince
 /// TODO: decide whether to change F(x) to F(t,x)
-/// TODO: allow tspan to be a vector of points to evaluate at
 pub fn integrate_rk45<F, T>(f: F, x0: &T, tspan: (f64,f64), opts: Option<RK45Options>) -> Result<T, String>
 where 
     F: Fn(&T) -> T,
@@ -227,4 +227,218 @@ where
 }
 
 
+// TODO: decide whether this is worth doing
+// /// Runge-Kutta 45 Dormand-Prince
+// /// TODO: decide whether to change F(x) to F(t,x)
+// pub fn integrate_rk45_sweep<F, T>(f: F, x0: &T, tspan: &Vec<f64>, opts: Option<RK45Options>) -> Result<T, String>
+// where 
+//     F: Fn(&T) -> T,
+//     T: State,
+// {
+//     // unwrap the options
+//     let opts = opts.unwrap_or_default();
+    
+//     // TODO: handle inputs that are invalid
+//     assert!(tspan.len() >= 2, "tspan must have >2 elements");
+
+//     let n: f64 = x0.length() as f64;
+
+//     let mut t: f64 = tspan[0];
+//     let tfinal: f64 = *tspan.last().unwrap();
+//     let mut x: T = x0.clone();
+//     let mut result: Vec<(f64, T)> = Vec::new();
+//     #[allow(unused_variables)]
+//     let mut steps: u64 = 0;
+//     let mut t_idx: usize = 1;
+
+//     // starting h = min { tspan/5 , 1 }
+//     let mut h: f64 = ((tspan[1] - tspan[0]) / 5.0).min(1.0);
+
+//     while t < tfinal {
+//         if t > tspan[t_idx] {
+//             t_idx += 1;
+//         }
+
+//         // make sure we don't step past dt
+//         if t + h > tspan[t_idx] {
+//             h = tspan[t_idx] - t + EPSILON;
+
+//             // TODO: add logic so if h becomes super tiny, we step past tspan.1 and interpolate at tspan.1
+//             //       to avoid floating point edge cases
+//         } else if h < opts.rhmin * tspan[t_idx] {
+//             return Err(
+//                 format!(
+//                     "Step size dropped below h_min ({}) at t = {}",
+//                     opts.rhmin * tspan[t_idx], t
+//                 )
+//             )
+//         }
+
+//         // compute k values
+//         let k1 = f(&x);
+
+//         let xk2 = x.clone() + (
+//             k1.clone() * A21
+//         ) * h;
+//         let k2 = f(&xk2);
+
+//         let xk3 = x.clone() + (
+//             k1.clone() * A31 + 
+//             k2.clone() * A32
+//         ) * h;
+//         let k3 = f(&xk3);
+
+//         let xk4 = x.clone() + (
+//             k1.clone() * A41 + 
+//             k2.clone() * A42 + 
+//             k3.clone() * A43
+//         ) * h;
+//         let k4 = f(&xk4);
+
+//         let xk5 = x.clone() + (
+//             k1.clone() * A51 + 
+//             k2.clone() * A52 + 
+//             k3.clone() * A53 + 
+//             k4.clone() * A54
+//         ) * h;
+//         let k5 = f(&xk5);
+
+//         let xk6 = x.clone() + (
+//             k1.clone() * A61 + 
+//             k2.clone() * A62 + 
+//             k3.clone() * A63 + 
+//             k4.clone() * A64 + 
+//             k5.clone() * A65
+//         ) * h;
+//         let k6 = f(&xk6);
+
+//         let xk7 = x.clone() + (
+//             k1.clone() * A71 + 
+//             k2.clone() * A72 + 
+//             k3.clone() * A73 + 
+//             k4.clone() * A74 + 
+//             k5.clone() * A75 +
+//             k6.clone() * A76
+//         ) * h;
+//         let k7 = f(&xk7);
+
+//         // compute 4th and 5th order
+//         let xh_5 = xk7;
+//         let xh_4 = x.clone() + (
+//             k1.clone() * B1S + 
+//             k2.clone() * B2S + 
+//             k3.clone() * B3S + 
+//             k4.clone() * B4S + 
+//             k5.clone() * B5S +
+//             k6.clone() * B6S +
+//             k7.clone() * B7S
+//         ) * h;
+
+//         // compute error
+//         // TODO: did I compute error allowed correctly? I don't think I did. Come back to this!
+//         let error_allowed = (xh_4.clone() - xh_5.clone())
+//             .map(|x|  opts.atol + opts.rtol * x.abs());
+
+//         // normalize the error
+//         // sqrt( 1/dim * (error / error allowed)^2 )
+//         let error_normalized = (xh_4.clone() - xh_5.clone())
+//             .zip_map(&error_allowed, |err, err_allow| err / err_allow)
+//             .map(|x| x*x)
+//             .sum()
+//             .mul(1.0 / n)
+//             .sqrt();
+        
+        
+//         if error_normalized <= 1.0 {
+//             // accept step
+//             t = t + h;
+//             x = xh_5;
+//             result.push((t, x.clone()));
+//             steps += 1;
+//         }
+
+//         // compute next h
+//         let scale = (SAFETY_FACTOR * error_normalized.powf(-1.0 / (2.0 + 1.0)))
+//             .clamp(opts.scale_min, opts.scale_max);
+
+//         // keep h smaller than h upper bound
+//         h = (h * scale).min(opts.rhmax * tspan.1);
+//     }
+
+//     Ok(x)
+// }
+
+
 // TODO: tests!!!
+
+
+#[cfg(test)]
+mod tests {
+    // use std::f64::consts::PI;
+    use approx::assert_relative_eq;
+
+    use super::*;
+
+    #[test]
+    fn test_rk45_const_deriv() {
+        // integrating 1 should product x(t) = t
+        fn f(_: &f64) -> f64 {
+            1.0
+        }
+
+        let x0: f64 = 0.0;
+        let tspan: (f64, f64) = (0.0, 2.0);
+
+        // expected value
+        let x1_expected: f64 = 2.0;
+
+        // true value
+        let result = integrate_rk45(f, &x0, tspan, None);
+        let x1_truth: f64 = result.unwrap();
+
+        assert_relative_eq!(x1_truth, x1_expected, epsilon=1e-12);
+    }
+
+    #[test]
+    fn test_rk45_dependent_deriv() {
+        // integrating x should product x(t) = x0 * e^t
+        fn f(x: &f64) -> f64 {
+            *x
+        }
+
+        let x0: f64 = 1.0;
+        let tspan: (f64, f64) = (0.0, 2.0);
+
+        // expected value
+        let x1_expected: f64 = x0 * 2f64.exp();
+
+        // true value
+        let result = integrate_rk45(f, &x0, tspan, None);
+        assert!(result.is_ok());
+        let x1_truth: f64 = result.unwrap();
+
+        assert_relative_eq!(x1_truth, x1_expected, epsilon=1e-3);
+    }
+
+    // Note: only integrates autonomous functions, not currently time dependent!
+    // #[test]
+    // fn test_rk45_sine_wave() {
+    //     // integrating x should be sin(t)
+    //     fn f(x: &f64) -> f64 {
+    //         x.cos()
+    //     }
+
+    //     let x0: f64 = -1.0;
+    //     let tspan: (f64, f64) = (0.0, 2.0*PI);
+
+    //     // expected value
+    //     let x1_expected: f64 = x0;
+
+    //     // true value
+    //     let result = integrate_rk45(f, &x0, tspan, None);
+    //     assert!(result.is_ok());
+    //     let x1_truth: f64 = result.unwrap();
+
+    //     assert_relative_eq!(x1_truth, x1_expected, epsilon=1e-8);
+    // }
+}
