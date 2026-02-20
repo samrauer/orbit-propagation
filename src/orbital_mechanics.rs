@@ -6,3 +6,4 @@ pub mod keplerian_orbit;
 pub mod stumpff;
 pub mod keplerian_propagation;
 pub mod orbit;
+pub mod gauss_problem;

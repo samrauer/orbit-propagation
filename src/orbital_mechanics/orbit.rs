@@ -36,3 +36,10 @@ impl Trajectory {
     }
 }
 
+#[derive(Debug)]
+pub struct TransferTrajectory {
+    pub traj1: Trajectory,
+    pub traj2: Trajectory,
+}
+
+
