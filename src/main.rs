@@ -1,21 +1,17 @@
-mod state;
-mod old;
 mod integrator;
 mod numerics;
+mod old;
 mod orbital_mechanics;
+mod state;
 
 extern crate nalgebra as na;
 use std::f64::consts::PI;
 
 use na::{Vector3, Vector6};
 
-
-use orbital_mechanics::force::compute_force_gravity;
 use orbital_mechanics::consts::{MU_EARTH, R_EARTH};
 
-use integrator::rk45::{integrate_rk45, RK45Options};
-
-
+use integrator::rk45::{RK45Options, integrate_rk45};
 
 fn main() {
     println!("Hello, world!");
@@ -34,15 +30,16 @@ fn main() {
         // TODO: there's gotta be a better way to do this than manually index
         let r: Vector3<f64> = Vector3::new(x[0], x[1], x[2]);
         let v: Vector3<f64> = Vector3::new(x[3], x[4], x[5]);
-        
+
         let xdot = v;
 
-        // mass = 1 since this doesn't actually depend on mass
-        let vdot = compute_force_gravity(&r, 1.0);
+        // compute gravity (F = ma => vdot = -mu/r^3 * r)
+        let r_norm = r.norm();
+        let vdot = (-orbital_mechanics::consts::MU_EARTH / r_norm.powi(3)) * r;
 
         stack_vectors(&xdot, &vdot)
     }
-    
+
     let expected_period = 2.0 * PI * (r0.norm().powi(3) / MU_EARTH).sqrt();
 
     let tspan = (0.0, expected_period);
@@ -60,16 +57,8 @@ fn main() {
     println!("t: {} -> {}", tspan.0, tspan.1);
     println!("r: {} -> {}", r0, r1);
     println!("v: {} -> {}", v0, v1);
-
 }
-
 
 fn stack_vectors(r: &Vector3<f64>, v: &Vector3<f64>) -> Vector6<f64> {
-    Vector6::from_iterator(
-        r
-            .iter()
-            .chain(v.iter())
-            .cloned()
-    )
+    Vector6::from_iterator(r.iter().chain(v.iter()).cloned())
 }
-
